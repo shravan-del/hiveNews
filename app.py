@@ -15,7 +15,7 @@ from flask import Flask, request, jsonify
 
 
 """**Collect all Reddit data from past week**"""
-openai_api_key = os.getenv('open_api')
+openai_api_key = os.getenv('OPENAI_API_KEY')
 nlp = spacy.load("en_core_web_sm")
 ENTITY_LABELS_TO_KEEP = {"PERSON", "ORG", "GPE", "LOC", "EVENT", "PRODUCT", "WORK_OF_ART"}
 
@@ -92,8 +92,8 @@ embed_model = SentenceTransformer("all-MiniLM-L6-v2")
 client = openai.OpenAI(api_key=openai_api_key)
 
 reddit = praw.Reddit(
-    client_id=os.getenv('client_id'),
-    client_secret=os.getenv('client_secret'),
+    client_id=os.getenv('REDDIT_CLIENT_ID'),
+    client_secret=os.getenv('REDDIT_CLIENT_SECRET'),
     user_agent='HFHIve',
     check_for_async=False
 )
