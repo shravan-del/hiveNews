@@ -567,11 +567,11 @@ def summarize_clusters_wrapper(query, context, context_question):
 # Flask API
 # =========================
 app = Flask(__name__)
-
+ 
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok"})
-
+ 
 @app.route("/hive", methods=["GET", "POST"])
 def hive():
     if request.method == "GET":
@@ -583,23 +583,48 @@ def hive():
         query = body.get("query", "").strip()
         context = body.get("context", "").strip()
         context_question = body.get("context_question", "").strip()
-
+ 
     if not query:
         return jsonify({"error": "query field is required"}), 400
-
+ 
     result = summarize_clusters_wrapper(query, context, context_question)
     if "error" in result:
         return jsonify(result), 422
     return jsonify(result), 200
-
-@app.route("/renderhive/<query>/<context>", methods=["GET"])
-def renderhive(query, context):
+ 
+@app.route("/renderhive/<path:query_context>", methods=["GET"])
+def renderhive(query_context):
+    """
+    Handles URLs like /renderhive/query/context where both can contain spaces.
+    Uses path:converter to avoid + being decoded as space prematurely.
+    """
+    from urllib.parse import unquote_plus
+    
+    print(f"\n[RENDERHIVE] Raw path received: '{query_context}'")
+    
+    # Split on the last "/" to separate query and context
+    parts = query_context.rsplit('/', 1)
+    if len(parts) == 2:
+        query, context = parts
+    elif len(parts) == 1:
+        query = parts[0]
+        context = ""
+    else:
+        return jsonify({"error": "Invalid URL format"}), 400
+    
+    # Decode URL encoding (handles + as space and other encoded chars)
+    query = unquote_plus(query)
+    context = unquote_plus(context) if context else ""
+    
+    print(f"[RENDERHIVE] Parsed: query='{query}', context='{context}'")
+    
     result = summarize_clusters_wrapper(query, context, "")
     if "error" in result:
+        print(f"[RENDERHIVE] Error result: {result}")
         return jsonify(result), 422
     return jsonify(result), 200
-
-
+ 
+ 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
