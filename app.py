@@ -93,7 +93,7 @@ def fetch_posts(query, subreddit_name="all", limit=None):
         all_rows = []
         subreddit = reddit.subreddit(subreddit_name)
 
-        results = subreddit.search(query, limit=limit, sort="hot")
+        results = subreddit.search(query, limit=limit, sort="relevance")
 
         for post in results:
             all_rows.append({
@@ -201,43 +201,40 @@ async def generate_reports_async(query: str, context_question: str, clusters: Di
         for cid in top_clusters
     ])
     
-    prompt = f"""You are an expert trend analyst analyzing Reddit conversations. 
-Your task is to generate a comprehensive trend report from multiple conversation clusters.
-
-Original Query/Topic: "{query}"
-{"Question Focus: " + context_question if is_question else ""}
-
-CLUSTER DATA:
-{cluster_data}
-
----
-
-GENERATE A SINGLE COMPREHENSIVE JSON RESPONSE with this exact structure:
-{{
-  "headline": "Main trend headline (≤15 words, Title Case, includes entities, includes verb)",
-  "executive_summary": "2-3 sentence overview of the dominant narrative",
-  "key_insights": [
-    "Insight 1: Specific development with named entities (2 sentences max)",
-    "Insight 2: Major theme or pattern (2 sentences max)",
-    "Insight 3: Controversial or polarizing take mentioned (2 sentences max)"
-  ],
-  "community_voices": [
-    "Direct quote from discussion (≤20 words)",
-    "Direct quote showing disagreement (≤20 words)",
-    "Direct quote showing majority sentiment (≤20 words)"
-  ],
-  "future_outlook": "One sentence describing likely next development or shift",
-  "off_topic_note": "Only include this if majority of posts are NOT about the query - briefly state what they're actually discussing"
-}}
-
-REQUIREMENTS:
-1. ALL content must come directly from provided cluster data
-2. Include 2-5 specific named entities/locations mentioned in posts
-3. Keep neutral, analytical tone (NOT journalistic)
-4. If majority posts are off-topic, explain why in off_topic_note
-5. Cite actual discussion patterns from the clusters
-6. Return ONLY valid JSON, no markdown formatting or extra text
-"""
+    prompt = f"""You are an expert trend analyst synthesizing insights from Reddit conversations.
+    
+    Original Query/Topic: "{query}"
+    {"Question Focus: " + context_question if is_question else ""}
+    
+    CLUSTER DATA:
+    {cluster_data}
+    
+    ---
+    
+    Create a comprehensive trend narrative that weaves together the different discussion threads. Paint a picture of what's happening, why people care, and where it's heading.
+    
+    GENERATE A JSON RESPONSE with this structure:
+    {{
+      "headline": "A compelling headline capturing the core trend or tension",
+      "narrative": "A 3-4 paragraph narrative that flows naturally between different perspectives and developments. Include specific entities, quotes, and examples from the conversations. Explain the 'why' behind what people are discussing.",
+      "key_tensions": [
+        "A major disagreement or conflicting perspective in the community",
+        "Another important point of contention or competing narrative",
+        "A third perspective that complicates the main story"
+      ],
+      "community_sentiment": "1-2 sentences on the overall mood and how it's changing",
+      "future_trajectory": "Where this conversation is likely heading based on current momentum and unresolved questions",
+      "off_topic_note": "Only if majority of posts diverge significantly from the query - explain what the conversation actually shifted toward"
+    }}
+    
+    GUIDELINES:
+    1. Prioritize telling a coherent story over strict constraints
+    2. Use direct quotes and real examples to ground the narrative
+    3. Show disagreement and nuance - don't flatten complexity
+    4. Include specific names, places, and events mentioned
+    5. Write conversationally but analytically - like a smart reporter, not a bot
+    6. Return ONLY valid JSON
+    """
 
     try:
         loop = asyncio.get_event_loop()
@@ -339,7 +336,7 @@ def summarize_clusters_wrapper(query, context, context_question):
         # Primary query
         try:
             print(f"[INFO] Fetching posts for: {query}")
-            base_posts = fetch_posts(f"{query}", subreddit_name="all", limit=250)  # INCREASED from 150
+            base_posts = fetch_posts(f"{query}", subreddit_name="all", limit=None)  # INCREASED from 150
             all_posts.extend(base_posts)
             print(f"[INFO] Fetched {len(base_posts)} posts from primary query")
         except Exception as e:
